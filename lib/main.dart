@@ -4,6 +4,63 @@ import 'dart:math';
 
 void main() => runApp(const TetrisApp());
 
+class TetrisState {
+  final List<int> currentPiece;
+  final List<int> occupiedCells;
+  final String currentType;
+  final int score;
+
+  TetrisState({
+    required this.currentPiece,
+    required this.occupiedCells,
+    required this.currentType,
+    required this.score,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'currentPiece': currentPiece,
+    'occupiedCells': occupiedCells,
+    'currentType': currentType,
+    'score': score,
+  };
+
+  factory TetrisState.fromJson(Map<String, dynamic> json) {
+    return TetrisState(
+      currentPiece: List<int>.from(json['currentPiece']),
+      occupiedCells: List<int>.from(json['occupiedCells']),
+      currentType: json['currentType'],
+      score: json['score'],
+    );
+  }
+}
+
+class GameOverScreen extends StatelessWidget {
+  final int finalScore;
+  const GameOverScreen({super.key, required this.finalScore});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("GAME OVER", style: TextStyle(color: Colors.redAccent, fontSize: 48, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Text("Ваш результат: $finalScore", style: const TextStyle(fontSize: 24, color: Colors.white)),
+            const SizedBox(height: 40),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("В ГЛАВНОЕ МЕНЮ"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class TetrisApp extends StatelessWidget {
   const TetrisApp({super.key});
   @override
@@ -31,6 +88,17 @@ class _TetrisGameState extends State<TetrisGame> {
   int highScore = 0;
   List<int> occupiedCells = [];
   Timer? gameTimer;
+
+  void saveGameState() {
+    final state = TetrisState(
+      currentPiece: currentPiece,
+      occupiedCells: occupiedCells,
+      currentType: currentType,
+      score: score,
+    );
+    String jsonString = state.toJson().toString();
+    print("Данные готовы к отправке в сеть: $jsonString");
+  }
 
   void _createNewPiece() {
     final random = Random();
@@ -84,7 +152,7 @@ class _TetrisGameState extends State<TetrisGame> {
     _checkLines();
     _createNewPiece();
     if (currentPiece.any((index) => occupiedCells.contains(index))) {
-      _showGameOverDialog();
+      _gameOver();
     }
   }
 
@@ -108,36 +176,16 @@ class _TetrisGameState extends State<TetrisGame> {
     }
   }
 
-  void _showGameOverDialog() {
+  void _gameOver() {
     gameTimer?.cancel();
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text("GAME OVER",
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 28)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Игра окончена!"),
-            const SizedBox(height: 10),
-            Text("Ваш счет: $score", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        actions: [
-          Center(
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.indigoAccent),
-              onPressed: () {
-                Navigator.pop(ctx);
-                setState(() => isGameStarted = false);
-              },
-              child: const Text("В ГЛАВНОЕ МЕНЮ", style: TextStyle(color: Colors.white)),
-            ),
-          ),
-        ],
+    setState(() {
+      isGameStarted = false;
+    });
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GameOverScreen(finalScore: score),
       ),
     );
   }
